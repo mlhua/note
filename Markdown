@@ -1,1 +1,164 @@
+# 开发过程笔记
+---
+# Markdown使用
+
+## 符号作用
+1. **#** 表示一级标题，**##** 表示二级标题，以此类推。
+2. **\*** 表示列表项，**-** 也可以表示列表项。
+3. **\>\s** 表示引用，引用内容会被缩进。
+4. **\*\*** 表示加粗，\* 表示斜体。
+5. **\`\`\`** 表示代码块，\` 表示行内代码。
+6. **- []\s** 表示复选框，[] 表示未选中，[x] 表示选中。
+7. **\-\s** 表示任务列表项，\[\s\] 表示未完成，\[\*\] 表示已完成。
+8. 表示序号         
+   1. 第一项
+   2. 第二项
+   3. 第三项
+
+---
+---
+
+# Docker 使用笔记
+
+## 一、Docker 是什么？
+Docker 是一个开源的容器化平台，可以将应用程序及其依赖打包到轻量级、可移植的容器中。容器在不同环境中运行结果一致，解决了"在我电脑上能运行"的问题。
+
+## 二、Docker 安装（Ubuntu 20.04）
+```bash
+# 使用清华镜像源加速
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# 将当前用户加入 docker 组（避免每次用 sudo）
+sudo usermod -aG docker $USER
+newgrp docker  # 刷新用户组
+
+# 验证安装
+docker --version
+docker run hello-world
+```
+
+## 三、Docker 基本命令
+```bash
+# 查看所有容器（包括已停止的）
+docker ps -a
+
+# 查看正在运行的容器
+docker ps
+
+# 查看本地镜像
+docker images
+
+# 删除容器
+docker rm 容器ID
+
+# 删除镜像
+docker rmi 镜像ID
+```
+
+## 四、ARM64 Qt6 构建环境使用
+
+### 1. 运行容器（挂载共享目录）
+```bash
+# 参数说明：
+# --privileged: 特权模式，容器可以访问主机设备
+# -v 主机目录:容器目录: 挂载共享文件夹
+# -it: 交互式终端
+# bash: 启动后进入 bash
+
+docker run --privileged \
+  -v /mnt/hgfs/WinShare/qt:/root \
+  -it terra-arm64-qt6-build-addmd:v2 \
+  bash
+```
+
+### 2. 在容器内编译项目
+```bash
+# 进入容器后（已经在 /root 目录）
+cd /root
+
+# 创建构建目录（保持源码干净）
+mkdir -p build && cd build
+
+# 配置 CMake（关键！指定 Qt6 路径）
+cmake .. -DCMAKE_PREFIX_PATH=/usr/lib/aarch64-linux-gnu/cmake/Qt6
+
+# 编译（用所有 CPU 核心加速）
+make -j$(nproc)
+
+# 编译完成后，生成的可执行文件
+ls -la appPunpQT
+file appPunpQT  # 确认是 ARM64 架构
+```
+
+### 3. 环境变量（可选）
+如果 Qt6 命令不在 PATH 中：
+```bash
+export PATH=/usr/bin/qt6/bin:$PATH
+```
+
+## 五、常见问题解决
+
+### 权限问题
+```bash
+# 错误：permission denied while trying to connect to Docker daemon socket
+# 解决：将用户添加到 docker 组
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### CMake 找不到 Qt6
+```bash
+# 错误：Could not find a package configuration file provided by "Qt6"
+# 解决：正确设置 CMAKE_PREFIX_PATH
+find /usr -name "Qt6Config.cmake" 2>/dev/null  # 先查找实际位置
+cmake .. -DCMAKE_PREFIX_PATH=找到的路径
+```
+
+### 编译输出文件在哪？
+编译生成的可执行文件在 `build/` 目录下：
+```bash
+/root/build/appPunpQT  # 在容器内
+# 由于挂载了共享目录，主机上也能看到：
+/mnt/hgfs/WinShare/qt/build/appPunpQT
+```
+
+## 六、镜像迁移
+将镜像复制到另一台机器：
+```bash
+# 保存镜像
+docker save terra-arm64-qt6-build-addmd:v2 | gzip > qt6-image.tar.gz
+
+# 传输文件（用 U 盘或 scp）
+cp qt6-image.tar.gz /mnt/hgfs/WinShare/
+
+# 在目标机加载
+docker load -i qt6-image.tar.gz
+```
+ 
+## 七、Linux中串口虚拟
+### 原理
+主要用SOCAT工具，核心指令如下socat -d -d PTY,link=/tmp/ttyV0,raw,echo=0 PTY,link=/tmp/ttyV1,raw,echo=0，这样他们就会形成一对虚拟串口，数据在它们之间传输。用于模拟串口通信。
+
+### 测试连通方法
+在一个终端中输入cat /tmp/ttyV0（等待接收）  
+在另一个终端中输入echo "Hello World" > /tmp/ttyV1（发送数据）  
+即可在第一个终端看到Hello World，说明通信成功。
+
+### 疑问解答
+1. 为什么使用socat  
+    因为它可以创建虚拟串口对，并且支持多种协议，非常适合模拟串口通信。
+2. 他创造出来的虚拟串口在哪个位置  
+   在/tmp/ttyV0和/tmp/ttyV1。
+3. 为什么在这个目录下？  
+    因为/tmp目录是系统临时目录，用于存储临时文件和目录。而/tmp目录下的文件和目录在系统重启后会被自动删除，所以可以安全地用于临时存储。
+4. 为什么调用核心指令后，显示socat[4397] N PTY is /dev/pts/3
+    在 Linux 底层，系统不会真的直接生成一个叫 ttyV0 的设备，而是从内核的伪终端池（/dev/pts/ 目录）中分配一个编号，这里分配的是编号为3的伪终端。所以，/dev/pts/3 就是 ttyV0 对应的设备。 
+ ---
+ # 指令合集
+
+ ## Linux指令
+ ### 常用
+ ssh 用户名@IP地址
+ 
 
