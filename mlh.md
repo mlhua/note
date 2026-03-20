@@ -286,3 +286,19 @@ scp D:\WinShare\qt\build\appPunp root@192.168.168.122:/userdata/app/
 5.重新打开进程
  ./manage-myapp.sh start 
 ```
+
+# GIT常用操作
+
+## 一、提交代码
+```bash
+git add .
+git commit -m "提交信息"
+git push origin 分支名
+```
+
+## 二、拉取代码
+```bash
+git clone ssh://github.com/用户名/仓库名.git #克隆仓库
+git pull origin 分支名 #更新代码
+git reset --hard #重置到最新提交，删除所有未提交的更改，才可以重新拉取代码
+```
