@@ -179,12 +179,114 @@ docker load -i qt6-image.tar.gz
 4. 为什么调用核心指令后，显示socat[4397] N PTY is /dev/pts/3
     在 Linux 底层，系统不会真的直接生成一个叫 ttyV0 的设备，而是从内核的伪终端池（/dev/pts/ 目录）中分配一个编号，这里分配的是编号为3的伪终端。所以，/dev/pts/3 就是 ttyV0 对应的设备。 
  ---
- # 指令合集
 
+# Socat 笔记
+
+## 一、介绍
+Socat 是一个用于创建虚拟串口对的工具，它可以在 Linux 系统中模拟串口通信。
+
+## 二、使用
+
+### 1.基础命令：创建一对互联的虚拟串口
+```bash
+socat -d -d PTY,link=/tmp/vpts0,raw,echo=0 PTY,link=/tmp/vpts1,raw,echo=0
+```
+参数详解：  
+-d -d: 输出调试信息（Fatal, Error, Warning, Info）。建议加上，这样你可以看到 socat 成功创建了哪些设备文件。  
+PTY: 指定地址类型为伪终端。  
+link=/tmp/vpts0: 为该伪终端创建一个符号链接（快捷方式）。你可以自定义路径，如 /dev/ttyV0（注意权限）。  
+raw: 原始模式。不处理特殊字符（如 Ctrl+C），确保数据透明传输。  
+echo=0: 禁用回显。防止发送的数据被原样弹回。  
+
+### 2.查看串口的数据
+在一个终端中输入cat /tmp/vpts0（等待接收）    
+但是一般我们发送的都是十六进制的数据，因此需要使用xxd命令来查看，如下：
+```bash
+xxd -p /tmp/vpts0
+```
+但是我们最常用的是使用socat自带的指令来完成这个操作，使用指令如下
+```bash
+#1. -v (Verbose) —— 显示传输方向和元数据
+#2. -x (Hexadecimal) —— 显示十六进制数据
+socat -v -x PTY,link=$HOME/vpts0,raw,echo=0 PTY,link=$HOME/vpts1,raw,echo=0,b115200
+```
+### 3.发送数据
+```bash
+#在一个终端中输入
+echo -e -n "\x01\x03\x00\x00\x00\x0a\xc5\xcd" > ./vpts1
+```
+
+## 三、常见问题
+### 波特率设置
+虽然虚拟串口不需要波特率，但是以往万一有些情况需要检查波特率是否一致，所以还是可以设置一下的。
+```bash
+socat -d -d PTY,link=/tmp/vpts0,raw,echo=0 PTY,link=/tmp/vpts1,raw,echo=0,b115200
+```
+### <span style="color: #f12d2d;">路径问题</span> 
+我在用这个的时候，是因为开发QT项目所需，起初是放在/tmp目录下的，但是在程序中，发现一直找不到这个文件，后面甚至怀疑是不是库不支持访问虚拟串口，经过好多次的排查，终于找到问题所在，原来定义虚拟串口需要在$HOME目录下，而不是/tmp目录下，因为我登录的当前账号是没办法直接访问/tmp目录下的内容，尽管我是用的sudo命令打开的软件，这个坑真的坑了我好久好久。
+因此，我建议在$HOME目录下定义虚拟串口，而不是/tmp目录下，命令如下
+```bash
+socat -d -d PTY,link=$HOME/vpts0,raw,echo=0 PTY,link=$HOME/vpts1,raw,echo=0,b115200
+```
+
+### 权限问题
+权限问题就在于，创建虚拟串口后，用ls -l命令查看权限，发现是0666，说明所有用户都可以访问这个串口了，如果不是的话就改一下用户权限，用如下指令：
+```bash
+chmod 0666 /tmp/vpts0 /tmp/vpts1
+```
+
+
+
+
+
+
+
+ # 指令合集
  ## Linux指令
  ### 常用
  ssh 用户名@IP地址
  
+### LS
+```bash
+ls -l #长格式显示：权限、所有者、大小、修改时间等
+ls -a #显示所有文件，包括隐藏文件
+```
+使用 -l 后显示出来的一串内容如下
+```bash
+drwx------ 2 lubancat lubancat 4096 3月  23 08:34 tracker-extract-files.1000
+drwxrwxrwt 2 root     root     4096 3月  23 08:33 VMwareDnD
+drwx------ 2 root     root     4096 3月  23 08:33 vmware-root_905-4013330159
+lrwxrwxrwx 1 lubancat lubancat   10 3月  23 09:48 vpts0 -> /dev/pts/2
+lrwxrwxrwx 1 lubancat lubancat   10 3月  23 09:48 vpts1 -> /dev/pts/3
+```
+字段解释  
+lrwxrwxrwx
+第一个字母 l 表示这是一个 符号链接 (link)。
+后面 9 个字符是权限位：
+r = 可读 (read)
+w = 可写 (write)
+x = 可执行 (execute)
+三组分别对应 所有者 (user)、所属组 (group)、其他人 (others)。
+所以这里是 rwxrwxrwx，表示所有人都可以读、写、执行这个链接。
+
+1
+表示硬链接数。对于普通文件是硬链接数量，对于目录是子目录数量。符号链接通常是 1。
+lubancat（所有者）
+文件的拥有者用户名。
+lubancat（所属组）
+文件所属的用户组。
+
+10
+文件大小（字节数）。这里是符号链接本身的长度，即链接路径字符串的长度（/dev/pts/2 有 10 个字符）。
+
+3月 23 09:48
+文件的最后修改时间。
+
+vpts0
+文件名。
+
+-> /dev/pts/2
+符号链接指向的目标路径。这里表示 vpts0 实际上指向 /dev/pts/2。
 
 ---
 # 问题集合
@@ -204,7 +306,17 @@ docker load -i qt6-image.tar.gz
 > 
 > **下一步计划**：罗列几个方向，然后思考选择哪个方向来解决这个问题  
 > 
-> **计划执行**：解决QT无法使用虚拟串口的问题  
+> **执行情况***：从解决QT无法使用虚拟串口的问题出发  
+>
+> **执行情况**：已解决虚拟串口的问题
+>
+> **计划执行**：测试QT的接收程序
+> 
+> **执行情况**：  
+> 2026-03-23 11:24:22  
+> 发送数据echo -e -n "\x01\x03\x00\x00\x00\x0a\xc5\xcd" > /tmp/vpts1，无反应  
+> 下一步验证，检查QT程序是否成功接收到了数据
+>
 > 
 
 # QT开发软件功能
