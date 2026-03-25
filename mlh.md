@@ -213,7 +213,8 @@ socat -v -x PTY,link=$HOME/vpts0,raw,echo=0 PTY,link=$HOME/vpts1,raw,echo=0,b115
 ### 3.发送数据
 ```bash
 #在一个终端中输入
-echo -e -n "\x01\x03\x00\x00\x00\x0a\xc5\xcd" > ./vpts1
+echo -e -n "\x01\x03\x00\x00\x00\x0a\xc5\xcd" > ~/vpts0 #主机的请求读数据
+echo -e -n "\x01\x03\x14\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa3\x67" > ~/vpts0 #从机的答复
 ```
 
 ## 三、常见问题
@@ -235,9 +236,33 @@ socat -d -d PTY,link=$HOME/vpts0,raw,echo=0 PTY,link=$HOME/vpts1,raw,echo=0,b115
 chmod 0666 /tmp/vpts0 /tmp/vpts1
 ```
 
+# CAN通讯
 
+## 一、CAN 是什么：多主异步串行总线
+CAN (Controller Area Network) 最初由 Bosch 开发，其核心定义是：一种基于优先级仲裁的、多主从的、半双工异步串行通讯协议。  
+多主性： 每个节点都是平等的，不存在 I2C 那种 Master 对 Slave 的轮询。  
+非破坏性仲裁： 依靠 ID 的位电平竞争，高优先级消息不会因为冲突而损坏。  
+高容错： 内置 5 种错误检测机制，是工业级可靠性的代名词。  
 
+## 二、 物理接口与电平特性
+1.差分信号接口CAN 必须使用 CAN_H 和 CAN_L 两根线。  
+显性电平（Dominant, 逻辑 0）： $V_{diff} = V_H - V_L \approx 2.0V$。此时驱动器强行拉开电位。  
+隐性电平（Recessive, 逻辑 1）： $V_{diff} \approx 0V$。此时驱动器高阻态，靠 120Ω 终端电阻回弹。
 
+2.常见物理接口
+DB9 接口： 标准工业接口（Pin 2 为 L，Pin 7 为 H）。  
+端子排： 常见的工业模块接口（H, L, GND）。  
+收发器芯片： 如 TJA1042, SN65HVD230。它负责将 MCU 的 TTL 电平（TX/RX）转换为总线的差分电平。  
+
+## 三、 协议帧结构（Standard CAN 2.0A 为例）
+一个完整的 CAN 数据帧包含 7 个部分：  
+1.SOF (Start of Frame)： 1 bit 显性电平。  
+2.Arbitration Field (仲裁域)： 11 bit ID + RTR 位（远程帧标志）。ID 越小电平 0 越多，优先级越高。  
+3.Control Field (控制域)： 包含 IDE（扩展标志）、保留位和 DLC（数据长度码，0-8 字节）。  
+4.Data Field (数据域)： 0 到 8 字节的实际负载。  
+5.CRC Field (校验域)： 15 bit CRC 序列 + 1 bit 界定符。  
+6.ACK Field (应答域)： 发送方发 1（隐性），接收方如果收到必须回填 0（显性）。  
+7.EOF (End of Frame)： 7 bit 连续隐性电平，表示结束。  
 
 
 
@@ -419,6 +444,8 @@ cd /userdata
 4.把在虚拟机中生成的build文件里面的appPunp改名移进前板的文件中，替代掉可执行文件
 如果那个工具打不开则在终端用这个指令
 scp D:\WinShare\qt\build\appPunp root@192.168.168.122:/userdata/app/
+#如果显示已经保存有旧的文件了，则用下面这条语句删掉
+ssh-keygen -R 192.168.168.122
 5.重新打开进程
  ./manage-myapp.sh start 
 ```
@@ -440,7 +467,9 @@ git reset --hard #重置到最新提交，删除所有未提交的更改，才�
 ```
 
 # 工作日记
-## 每日工作
+## 每日工作总结
+
+## 每时工作细则
 > <span style="color: #5bfaff;">📅2026-03-24 09:22:05</span>  
 > 启动两个不同的QT程序，让他们相互通讯  
 > <span style="color: #5bfaff;">📅2026-03-24 10:10:32</span>   
@@ -457,4 +486,18 @@ git reset --hard #重置到最新提交，删除所有未提交的更改，才�
 > 终于定位到问题了，数据没问题而是触发了信号，但是没有执行槽函数，所以没有下一步操作  
 > <span style="color: #5bfaff;">📅2026-03-24 16:09:05</span>  
 > 终于疏通信号了，给的程序真的坑死人，不一步步梳理根本发现不了，燃尽了，问题在两个地方，一个是触发信号了，但是<span style="color: #f12d2d;">没有执行槽函数</span>，一个是执行成功和失败的增减前有个jb判断语句，直接跳出去了。原因在于源程序中使用的槽函数是旧版本的格式，新版本不支持所以就根本没有执行这个槽函数，同时Connect格式也不对用<span style="color: #f12d2d;">target: target</span>  有问题，经过测试发现这种写法没办法绑定成功，要target: mb2这样写明。但是之前的一直用旧版本槽函数格式，也没见有问题，所以这个问题我觉得有争议，但是没时间验证了，余着先。  
+> <span style="color: #5bfaff;">📅2026-03-25 10:25:12</span>  
+> 完成了modbus的测试方案编写，现在准备开始编码  
+> <span style="color: #5bfaff;">📅2026-03-25 10:51:15</span>  
+> 下一步：写主机端让主机每1s发送一次数据，先实现失败次数可以和发送次数同步增加，因为之前的成功次数加上失败次数不等于发送次数，所以要排查问题。  
+> <span style="color: #5bfaff;">📅2026-03-25 11:08:10</span>  
+> 下一步：建立三对的虚拟串口，然后实现通讯次数的同步刷新  
+> <span style="color: #5bfaff;">📅2026-03-25 11:43:57</span>  
+> 下一步：实现三对的串口通讯，然后实现通讯次数的同步刷新  
+> <span style="color: #5bfaff;">📅2026-03-25 13:26:46</span>  
+> 下一步：编写完整的modbus测试程序，实现三对的串口通讯，然后实现通讯次数的同步刷新。程序大致如下，主机端每0.5s三路modbus发读数据，总次数加一，从机如果接收到并且响应，则成功次数加一，否则失败次数加一。  
+> <span style="color: #5bfaff;">📅2026-03-25 16:27:14</span>  
+> 终于实机测试通过了  
+> <span style="color: #5bfaff;">📅2026-03-25 16:27:55</span>  
+> 学习CAN通讯，熟悉CAN的C++部分内容
 
