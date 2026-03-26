@@ -244,7 +244,7 @@ CAN (Controller Area Network) 最初由 Bosch 开发，其核心定义是：一�
 非破坏性仲裁： 依靠 ID 的位电平竞争，高优先级消息不会因为冲突而损坏。  
 高容错： 内置 5 种错误检测机制，是工业级可靠性的代名词。  
 
-## 二、 物理接口与电平特性
+## 二、物理接口与电平特性
 1.差分信号接口CAN 必须使用 CAN_H 和 CAN_L 两根线。  
 显性电平（Dominant, 逻辑 0）： $V_{diff} = V_H - V_L \approx 2.0V$。此时驱动器强行拉开电位。  
 隐性电平（Recessive, 逻辑 1）： $V_{diff} \approx 0V$。此时驱动器高阻态，靠 120Ω 终端电阻回弹。
@@ -254,7 +254,7 @@ DB9 接口： 标准工业接口（Pin 2 为 L，Pin 7 为 H）。
 端子排： 常见的工业模块接口（H, L, GND）。  
 收发器芯片： 如 TJA1042, SN65HVD230。它负责将 MCU 的 TTL 电平（TX/RX）转换为总线的差分电平。  
 
-## 三、 协议帧结构（Standard CAN 2.0A 为例）
+## 三、协议帧结构（Standard CAN 2.0A 为例）
 一个完整的 CAN 数据帧包含 7 个部分：  
 1.SOF (Start of Frame)： 1 bit 显性电平。  
 2.Arbitration Field (仲裁域)： 11 bit ID + RTR 位（远程帧标志）。ID 越小电平 0 越多，优先级越高。  
@@ -263,6 +263,101 @@ DB9 接口： 标准工业接口（Pin 2 为 L，Pin 7 为 H）。
 5.CRC Field (校验域)： 15 bit CRC 序列 + 1 bit 界定符。  
 6.ACK Field (应答域)： 发送方发 1（隐性），接收方如果收到必须回填 0（显性）。  
 7.EOF (End of Frame)： 7 bit 连续隐性电平，表示结束。  
+
+## 四、CAN的配置
+CAN主要配置的内容如下：波特率与位定时 (Bit Timing)；过滤器配置 (Filter/Acceptance Mask)；报文发送与接收对象 (Message Objects/Mailboxes)；工作模式 (Operating Modes)；中断与错误处理 (Interrupts & Errors)；应用层参数 (DBC 关联配置)
+```
+1. 波特率与位定时 (Bit Timing)
+这是最基础的配置。如果节点之间的“节拍”不一致，通讯会直接报错。
+时钟分频 (Prescaler)： 确定 CAN 控制器的基本工作时钟。
+时间段配置 (Phase Segments)： 将一个位时间（Bit Time）划分为 Sync_Seg、Prop_Seg、Phase_Seg1 和 Phase_Seg2。
+采样点 (Sample Point)： 决定在一位的什么位置读取数据。通常车载 CAN 设置在 80% 左右，工业领域可能略有不同。
+SJW (Synchronization Jump Width)： 允许的时钟补偿宽度，用于处理节点间的频率偏差。
+
+2. 过滤器配置 (Filter/Acceptance Mask)
+CAN 总线是广播式的，你的节点会收到总线上所有的消息。为了不让 CPU 被无关信息淹没，需要设置硬件过滤器。
+过滤器模式： * 标识符列表模式： 只接收特定 ID 的报文。
+掩码模式 (Mask Mode)： 通过掩码屏蔽掉 ID 中的某些位，从而接收一组符合规律的 ID。
+ID 类型： 指定接收标准帧（11位）还是扩展帧（29位）。
+
+3. 报文发送与接收对象 (Message Objects/Mailboxes)
+软件需要为频繁使用的报文开辟“窗口”。
+发送邮箱 (Tx Mailbox)： 配置优先级（按 ID 大小或先后顺序）和发送缓冲区。
+接收 FIFO/邮箱 (Rx FIFO)： 配置缓存深度，防止报文来不及处理而被覆盖。
+
+4. 工作模式 (Operating Modes)
+根据调试或运行需求，通常有以下几种模式可选：
+Normal Mode： 正常收发模式。
+Loopback Mode (回环模式)： 用于自测，发出的报文自己能收到，不影响总线。
+Silent Mode (静默模式)： 只听不发，常用于总线监听或波特率自动识别。
+Sleep Mode： 低功耗模式。
+
+5. 中断与错误处理 (Interrupts & Errors)
+为了提高实时性，软件通常需要配置中断回调函数：
+接收中断： 收到新数据时触发。
+发送完成中断： 数据成功发出后触发。
+错误中断： 当总线发生位错误、填充错误或进入 Bus-Off 状态时报警。
+注意： 在软件层面，通常还需要编写 Bus-Off 恢复逻辑，确保节点在因干扰脱离总线后能自动尝试重连。
+
+6. 应用层参数 (DBC 关联配置)
+如果你在做更高级的开发，通常需要结合 DBC 文件（数据库文件）进行配置：
+周期性 (Cycle Time)： 报文是每 10ms 发一次，还是触发式发送。
+信号解析： 起始位、长度、大小端（Intel/Motorola）、偏移量（Offset）和缩放系数（Factor）。
+```
+## 五、CAN的QT程序实现
+1. 用socket创建一个CAN套接字 程序是int s = socket(PF_CAN, SOCK_RAW, CAN_RAW);  
+这里 PF_CAN 表示 CAN 协议族，SOCK_RAW 表示原始套接字，CAN_RAW 表示使用原始 CAN 报文。  
+套接字 (Socket)：操作系统提供的一种通信接口，用来屏蔽底层协议细节。常见的有 TCP/UDP 套接字。  
+SocketCAN：Linux 内核提供的一套机制，把 CAN 总线接口抽象为套接字。开发者可以通过 AF_CAN 域来创建 CAN 套接字。
+2. 使用ioctl获取CAN设备的接口索引  
+ioctl(s, SIOCGIFINDEX, &ifr);   
+为什么不直接用名字？： bind 函数需要的参数是一个整数索引（ifindex），而用户只知道字符串名字（"vcan0"）。ioctl 配合 SIOCGIFINDEX 命令充当了查字典的角色。  
+3. 把接口索引绑定到套接字上  
+bind(s, (struct sockaddr *)&addr, sizeof(addr))   
+逻辑含义：执行 bind 之前，这个 Socket 只是一个空壳；执行 bind 之后，这个 Socket 就正式与物理（或虚拟）的 CAN 硬件挂钩了。
+4. 数据交互 (Read/Write)
+使用标准的 Linux 文件操作：  
+发送：write(s, &frame, sizeof(struct can_frame));  
+接收：read(s, &frame, sizeof(struct can_frame));  
+5. 资源释放
+关闭：close(s);
+
+## 六、CAN的QT程序测试
+1. 安装can-utils用于linux测试  
+```bash
+sudo apt update
+sudo apt install can-utils
+```
+2. 启动虚拟CAN设备
+```bash
+# 1. 加载内核模块
+sudo modprobe vcan
+# 2. 创建虚拟 CAN 设备
+# 如果设备已存在，先删除（确保干净环境，可选）
+sudo ip link delete $VCAN_NAME 2>/dev/null
+# 3. 添加并启动设备
+sudo ip link add dev $VCAN_NAME type vcan
+sudo ip link set up $VCAN_NAME
+```
+3. 查看虚拟CAN设备
+```bash
+ip link show
+```
+4. 查看数据传输情况
+```bash
+candump vcan0
+```
+5. 模拟发送数据
+```bash
+# 向 can0 发送 ID 为 123，数据为 11 22 33 44 55 66 77 88 的帧
+cansend vcan0 123#1122334455667788
+```
+
+
+
+
+
+
 
 
 
@@ -500,4 +595,10 @@ git reset --hard #重置到最新提交，删除所有未提交的更改，才�
 > 终于实机测试通过了  
 > <span style="color: #5bfaff;">📅2026-03-25 16:27:55</span>  
 > 学习CAN通讯，熟悉CAN的C++部分内容
+> <span style="color: #5bfaff;">📅2026-03-26 08:59:57</span>  
+> 学习CAN通讯
+> <span style="color: #5bfaff;">📅2026-03-26 10:33:20</span>  
+> CAN在QT程序中实现，就是用socat的套接字来实现CAN的通讯。  
+> 下一步：测试后端工程师给的CAN通讯程序是否正常运行。
+> 
 
