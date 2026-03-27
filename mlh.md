@@ -600,5 +600,8 @@ git reset --hard #重置到最新提交，删除所有未提交的更改，才�
 > <span style="color: #5bfaff;">📅2026-03-26 10:33:20</span>  
 > CAN在QT程序中实现，就是用socat的套接字来实现CAN的通讯。  
 > 下一步：测试后端工程师给的CAN通讯程序是否正常运行。
-> 
+> <span style="color: #5bfaff;">📅2026-03-26 15:14:39</span> 
+> 下一步：编写CAN的QT程序测试方案的xmind
+> <span style="color: #5bfaff;">📅2026-03-26 16:07:58</span> 
+> 下一步：编写CAN测试的UI显示程序
 
