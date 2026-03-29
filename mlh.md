@@ -353,7 +353,10 @@ candump vcan0
 cansend vcan0 123#1122334455667788
 ```
 
+# UDP
+## 一、UDP是什么
 
+## 二、UDP怎么用
 
 
 
@@ -511,7 +514,7 @@ Make 步骤： * 调用编译器（如 MSVC 的 nmake 或 GCC 的 make）进行�
 
 ---
 # 常用操作
-## 一、烧录前板程序
+## 一、项目烧录前板程序
 ```bash
 #arm64架构编译
 1.虚拟机上挂载好主机的共享路径，获得目的文件
@@ -544,6 +547,19 @@ ssh-keygen -R 192.168.168.122
 5.重新打开进程
  ./manage-myapp.sh start 
 ```
+
+## 二、window挂载linux目录
+工具使用：WinFsp + SSHFS-Win（github上都有下载）  
+下载地址：https://github.com/winfsp  
+使用方法：我的做法是打开资源管理器，点击地址栏，输入
+```bash
+#.r 代表以当前登录用户身份运行，通常能解决 80% 的权限拒绝问题
+\\sshfs.r\用户名@服务器IP\home\用户名
+```
+
+## 三、其他应用识别当前电脑的IP为梯子IP
+cursor举例：在clash软件中，开启全局模式，将所有流量都通过梯子路由，这样就可以了，同时还要在cursor的网络设置中，把http2.2改为用http1.1
+
 
 # GIT常用操作
 
