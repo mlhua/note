@@ -334,10 +334,10 @@ sudo apt install can-utils
 sudo modprobe vcan
 # 2. 创建虚拟 CAN 设备
 # 如果设备已存在，先删除（确保干净环境，可选）
-sudo ip link delete $VCAN_NAME 2>/dev/null
+sudo ip link delete vcan0>/dev/null
 # 3. 添加并启动设备
-sudo ip link add dev $VCAN_NAME type vcan
-sudo ip link set up $VCAN_NAME
+sudo ip link add dev vcan0 type vcan
+sudo ip link set up vcan0
 ```
 3. 查看虚拟CAN设备
 ```bash
@@ -352,6 +352,54 @@ candump vcan0
 # 向 can0 发送 ID 为 123，数据为 11 22 33 44 55 66 77 88 的帧
 cansend vcan0 123#1122334455667788
 ```
+6. 把两个虚拟CAN设备连接起来
+用这个的时候需要系统加载can-gw的模块，因为cangw 就像是一个“路由器”，负责把 vcan0 的数据转发到 vcan1。但这个“路由功能”在 Linux 内核里是一个独立的模块，默认情况下很多系统（尤其是虚拟机或嵌入式板卡）没有加载它。
+```bash
+# 加载can-gw模块
+sudo modprobe can-gw
+# 将 vcan0 的流量转发到 vcan1
+sudo cangw -A -s vcan0 -d vcan1 -e
+# 将 vcan1 的流量转发到 vcan0
+sudo cangw -A -s vcan1 -d vcan0 -e
+```
+
+# QT的使用
+## 一、启动两个QT程序
+启动两个QT程序不用同时打开两个工程的，可以用指令来打开编译好的可执行文件，同时可以使用传入参数的方法来区分两个程序，编译好的文件和需要传入的参数例子如下（开两个终端）
+```bash
+root@lubancat-vm:/home/lubancat/work/qt/punp/qt/build/Desktop_Qt_6_8_3-Debug# sudo ./appPunpQT helper
+root@lubancat-vm:/home/lubancat/work/qt/punp/qt/build/Desktop_Qt_6_8_3-Debug# sudo ./appPunpQT master
+```
+## QT编译后生成的文件
+
+
+## QT的编译过程--把什么变成什么
+
+# iperf3
+## 一、iperf3是什么
+iperf3是一个网络性能测试工具，主要用于测量网络带宽和延迟。它可以在客户端和服务器之间进行数据传输，并提供详细的性能指标，如带宽、抖动和丢包率等。iperf3支持TCP和UDP协议，可以用于评估网络连接的质量和性能，常用于网络调试、性能优化和容量规划等场景。
+## 二、iperf3的作用
+
+
+
+## 三、iperf3的使用
+iperf3的使用方法如下：
+```bash
+#启动服务器端（负责接收数据）
+iperf3 -s
+#启动客户端（负责发送数据）
+iperf3 -c 服务器IP地址
+#其余参数说明：参数,说明,示例
+-t,自定义时长（秒）,iperf3 -c [IP] -t 60 (测试1分钟)
+-p,指定端口,iperf3 -s -p 8080 (更改默认端口)
+-i,输出间隔,iperf3 -c [IP] -i 2 (每2秒显示一次结果)
+-R,反向测试,iperf3 -c [IP] -R (测试服务器下载速度)
+-P,多线程测试,iperf3 -c [IP] -P 5 (同时开启5个流，压测性能)
+-u,UDP 模式,iperf3 -c [IP] -u -b 100M (测试100M带宽下的UDP丢包)
+-f,格式化单位,iperf3 -c [IP] -f M (以MBytes显示结果)
+```
+
+
 
 # UDP
 ## 一、UDP是什么
@@ -384,7 +432,7 @@ UDP（用户数据报协议）：无连接、不可靠但高效。适用于实�
 
 
 
- # 指令合集
+ # linux学习
  ## Linux指令
  ### 常用
  ssh 用户名@IP地址
@@ -440,6 +488,76 @@ rm -rf 文件名
 -i	--interactive	交互模式。删除前逐一询问你是否确认（更安全）。
 -v	--verbose	显示过程。列出每一个正在被删除的文件名。
 ```
+
+### 3、grep
+从文件中通过关键字过滤文本行    
+语法：grep [-n] 关键字 文件路径  
+-n	--number	显示行号。  
+
+### 4、wc
+统计文件中的行数、字数和字符数等  
+语法：wc [-lwm] 文件路径  
+-l	--lines	统计行数。  
+-w	--words	统计单词数。  
+-m	--chars	统计字符数。  
+
+### 5、管道符“|”
+|	--pipe	管道符。将前一个命令的输出作为后一个命令的输入。  
+练习：cat test.txt | grep "itcast" | wc -l # 统计包含 itcast 关键字的行数  
+
+### 6、echo命令
+echo "文本内容" # 输出文本内容到终端  
+
+### 7、反引号'
+反引号（`）用于执行命令并返回其输出。  
+
+### 8、重定向符号
+```bash
+>	--redirect	重定向。将命令的输出重定向到文件。  
+<	--redirect	重定向。将文件的输入重定向到命令。  
+&	--append	追加。将命令的输出追加到文件。  
+&	--append	追加。将文件的输入追加到命令。  
+>	--redirect	重定向符号。将命令的输出重定向到文件。  
+>>	--append-redirect	重定向符号。将命令的输出追加到文件。  
+```
+
+### 9、tail
+使用tail命令查看文件的最后几行内容
+```bash
+tail -n 文件路径 # 查看文件的最后 n 行内容
+```
+### 10、top
+直接输入top命令，可查看cpu的运行情况、内存的使用情况、每个进程的占用资源情况等。同时Linux 系统中，每个运行的进程在 /proc 目录下都有一个以 PID 命名的文件夹。通过查看这个文件夹，你可以挖出它的所有信息
+```bash
+ls -l /proc/1234/cwd # 查看进程 1234 的当前工作目录。
+```
+### 11、cp
+cp指令用于复制文件或目录。  
+```bash
+cp -r 源路径 目标路径  #最常用，递归复制目录
+```
+
+
+# 1.QT学习
+## 1.1.QML学习
+### 1.1.1.常用操作
+1. 在一个界面中使用另一个界面
+这种操作有好几种方法如下所示
+```qml
+//方法一：作为属性声明
+property UserCanTest cantest1: UserCanTest{
+    canTarget: can1
+    send_frame_id: 0x456 
+    recv_frame_id: 0x123
+}
+将组件实例作为属性值，通过属性名访问
+//方法二：作为组件声明
+GetTestData {
+    id: getTestData
+}
+作为父组件的子元素，通过id访问，作为独立的子组件存在
+```
+
 
 ---
 # 问题集合
@@ -580,6 +698,11 @@ ssh-keygen -R 192.168.168.122
 ## 三、其他应用识别当前电脑的IP为梯子IP
 cursor举例：在clash软件中，开启全局模式，将所有流量都通过梯子路由，这样就可以了，同时还要在cursor的网络设置中，把http2.2改为用http1.1
 
+## 四、linux上重启网络IP
+```bash
+sudo systemctl restart NetworkManager # 重启网络管理器
+sudo dhclient -v ens36
+```
 
 # GIT常用操作
 
@@ -595,6 +718,11 @@ git push origin 分支名
 git clone ssh://github.com/用户名/仓库名.git #克隆仓库
 git pull origin 分支名 #更新代码
 git reset --hard #重置到最新提交，删除所有未提交的更改，才可以重新拉取代码
+```
+
+## 三、版本回退
+```bash
+git reset --hard 提交ID #回退到指定提交
 ```
 
 # 工作日记
@@ -630,14 +758,16 @@ git reset --hard #重置到最新提交，删除所有未提交的更改，才�
 > <span style="color: #5bfaff;">📅2026-03-25 16:27:14</span>  
 > 终于实机测试通过了  
 > <span style="color: #5bfaff;">📅2026-03-25 16:27:55</span>  
-> 学习CAN通讯，熟悉CAN的C++部分内容
+> 学习CAN通讯，熟悉CAN的C++部分内容  
 > <span style="color: #5bfaff;">📅2026-03-26 08:59:57</span>  
-> 学习CAN通讯
+> 学习CAN通讯  
 > <span style="color: #5bfaff;">📅2026-03-26 10:33:20</span>  
 > CAN在QT程序中实现，就是用socat的套接字来实现CAN的通讯。  
-> 下一步：测试后端工程师给的CAN通讯程序是否正常运行。
-> <span style="color: #5bfaff;">📅2026-03-26 15:14:39</span> 
-> 下一步：编写CAN的QT程序测试方案的xmind
-> <span style="color: #5bfaff;">📅2026-03-26 16:07:58</span> 
-> 下一步：编写CAN测试的UI显示程序
-
+> 下一步：测试后端工程师给的CAN通讯程序是否正常运行。  
+> <span style="color: #5bfaff;">📅2026-03-26 15:14:39</span>  
+> 下一步：编写CAN的QT程序测试方案的xmind  
+> <span style="color: #5bfaff;">📅2026-03-26 16:07:58</span>  
+> 下一步：编写CAN测试的UI显示程序  
+> <span style="color: #5bfaff;">📅2026-03-30 10:02:23</span>  
+> 真的服了，合并git分支搞半天，之前写的通讯那边的一直都没有更新，导致合并起来很麻烦。  
+> 下一步：写好CAN的应用封装，只输出我需要的CAN通讯总次数，成功次数，失败次数  
