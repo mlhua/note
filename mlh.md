@@ -362,6 +362,14 @@ sudo cangw -A -s vcan0 -d vcan1 -e
 # 将 vcan1 的流量转发到 vcan0
 sudo cangw -A -s vcan1 -d vcan0 -e
 ```
+## 七、CAN在实体机上的启动
+为了方便我写成了一条指令
+```bash
+#就是开启can0和can1，并且设置波特率为500000
+ip link set can0 down && ip link set can0 type can bitrate 500000 && ip link set can0 up && ip link set can1 down && ip link set can1 type can bitrate 500000 && ip link set can1 up
+```
+
+
 
 # QT的使用
 ## 一、启动两个QT程序
@@ -378,26 +386,33 @@ root@lubancat-vm:/home/lubancat/work/qt/punp/qt/build/Desktop_Qt_6_8_3-Debug# su
 # iperf3
 ## 一、iperf3是什么
 iperf3是一个网络性能测试工具，主要用于测量网络带宽和延迟。它可以在客户端和服务器之间进行数据传输，并提供详细的性能指标，如带宽、抖动和丢包率等。iperf3支持TCP和UDP协议，可以用于评估网络连接的质量和性能，常用于网络调试、性能优化和容量规划等场景。
-## 二、iperf3的作用
-
-
-
-## 三、iperf3的使用
+## 二、iperf3的使用
 iperf3的使用方法如下：
 ```bash
 #启动服务器端（负责接收数据）
 iperf3 -s
+#服务端指令
+-s, --server: 启动服务端模式。
+-D, --daemon: 后台运行。作为开发，我们经常把它挂在后台服务器上。
+-1, --one-off: 接收并处理完一次测试请求后就自动退出。
 #启动客户端（负责发送数据）
 iperf3 -c 服务器IP地址
-#其余参数说明：参数,说明,示例
--t,自定义时长（秒）,iperf3 -c [IP] -t 60 (测试1分钟)
--p,指定端口,iperf3 -s -p 8080 (更改默认端口)
--i,输出间隔,iperf3 -c [IP] -i 2 (每2秒显示一次结果)
--R,反向测试,iperf3 -c [IP] -R (测试服务器下载速度)
--P,多线程测试,iperf3 -c [IP] -P 5 (同时开启5个流，压测性能)
--u,UDP 模式,iperf3 -c [IP] -u -b 100M (测试100M带宽下的UDP丢包)
--f,格式化单位,iperf3 -c [IP] -f M (以MBytes显示结果)
+#客户端指令
+-c [host]: 启动客户端并连接到指定的服务端 IP。
+-t, --time [seconds]: 测试时长，默认 10 秒。
+-R, --reverse: 反向模式（服务端发，客户端收）。这在排查非对称带宽（如下行带宽）时非常有用。
+#其他常用选项
+-u, --udp: 使用 UDP 协议。默认是 TCP。
+-b, --bandwidth [N[KM]]: 限制带宽。对于 UDP 测试，必须指定这个参数，否则它会默认以 1Mbps 运行。
+-P, --parallel [n]: 多线程测试。启动多个并发流。如果单线程跑不满带宽（通常受限于单核 CPU 性能或 TCP 窗口），记得加这个。
+-w, --window [size]: 设置套接字缓冲区大小（即 TCP 窗口大小）。在长距离、高延迟的网络中，这个值调大能显著提升吞吐量。
+-M, --set-mss [n]: 设置 TCP 最大分段大小（MSS），用于测试 MTU 限制。
+-4 / -6: 强制使用 IPv4 或 IPv6。
+-Z, --zerocopy: 使用零拷贝发送数据。这能显著降低测试时的 CPU 负载。
+-O, --omit [n]: 忽略前 n 秒的测试数据。这是为了规避 TCP 慢启动（Slow Start）对最终平均值的影响。
+-B, --bind [host]: 绑定到指定的本地 IP 地址。这在多网卡环境中很有用，可以指定测试走哪个接口。
 ```
+## 三、iperf3的输出内容
 
 
 
@@ -537,6 +552,292 @@ cp指令用于复制文件或目录。
 cp -r 源路径 目标路径  #最常用，递归复制目录
 ```
 
+### 12、mv
+mv 用于移动或重命名文件/目录  
+```bash
+mv 源路径 目标路径     # 移动文件或目录
+mv old.txt new.txt    # 重命名
+```
+
+### 13、mkdir
+创建目录  
+```bash
+mkdir 目录名
+mkdir -p a/b/c   # 递归创建多级目录
+```
+
+### 14、touch
+创建空文件或修改文件时间  
+```bash
+touch 文件名
+```
+
+### 15、cat
+查看文件内容（适合小文件）  
+```bash
+cat 文件路径
+```
+
+### 16、more / less
+分页查看文件  
+```bash
+more 文件路径
+less 文件路径   # 更强大，支持上下滚动、搜索
+```
+
+### 17、head
+查看文件开头内容  
+```bash
+head -n 10 文件路径   # 查看前10行
+```
+
+### 18、chmod
+修改文件权限  
+```bash
+chmod 755 文件名
+```
+说明：
+r=4，w=2，x=1  
+755 表示：所有者 rwx，组 r-x，其他 r-x  
+
+### 19、chown
+修改文件所有者  
+```bash
+chown 用户名 文件名
+chown 用户名:组名 文件名
+```
+
+### 20、df
+查看磁盘使用情况  
+```bash
+df -h
+```
+
+### 21、du
+查看目录占用空间  
+```bash
+du -h 目录
+du -sh 目录   # 总大小
+```
+
+### 22、ps
+查看进程  
+```bash
+ps aux
+```
+
+### 23、kill
+结束进程  
+```bash
+kill PID
+kill -9 PID   # 强制杀死
+```
+
+### 24、find
+查找文件  
+```bash
+find 路径 -name "文件名"
+```
+
+### 25、which
+查找命令路径  
+```bash
+which ls
+```
+
+### 26、whereis
+查找命令相关文件  
+```bash
+whereis ls
+```
+
+### 27、uname
+查看系统信息  
+```bash
+uname -a
+```
+
+### 28、history
+查看历史命令  
+```bash
+history
+```
+
+### 29、clear
+清空终端  
+```bash
+clear
+```
+
+### 30、alias
+设置命令别名  
+```bash
+alias ll='ls -l'
+```
+
+### 31、tar
+打包文件或目录  
+```bash
+tar -czvf 文件名.tar.gz 目录名
+-c	创建新的归档文件
+-x	解压归档文件
+-t	列出归档内容
+-f	指定归档文件名（必须紧跟文件名）
+-v	显示详细过程（verbose）
+-z	使用 gzip 压缩或解压
+-j	使用 bzip2 压缩或解压
+-J	使用 xz 压缩或解压
+-u	更新归档中的文件
+-r	向已有归档追加文件
+```
+
+### 32、ip
+```bash
+ip [选项] 对象 {命令 | help}
+对象 (OBJECT)：指定操作的网络资源类型
+命令 (COMMAND)：对对象执行的操作，如 show、add、del、set
+选项 (OPTIONS)：控制输出或协议族，如 -4 (IPv4)、-6 (IPv6)、-s (统计信息)
+
+
+link	网络接口管理	ip link show 查看接口；ip link set eth0 up 启动网卡
+addr	IP 地址管理	ip addr show 查看地址；ip addr add 192.168.1.10/24 dev eth0 添加地址
+route	路由表管理	ip route show 查看路由；ip route add default via 192.168.1.1 添加默认路由
+neigh	邻居表 (ARP/ND)	ip neigh show 查看 ARP 表；ip neigh add 192.168.1.20 lladdr 00:11:22:33:44:55 dev eth0 添加静态 ARP
+rule	策略路由规则	ip rule show 查看规则；ip rule add from 192.168.1.100 table 100 添加策略路由
+netns	网络命名空间	ip netns add testns 创建命名空间；ip netns exec testns bash 进入命名空间
+tunnel	隧道管理 (GRE/IPIP)	ip tunnel add tun0 mode gre remote 1.2.3.4 local 5.6.7.8
+```
+
+### 常用组合示例
+
+```bash
+# 查找日志中包含 error 的行数
+cat log.txt | grep "error" | wc -l
+
+# 查看占用内存最多的进程
+ps aux | sort -rk 4 | head
+
+# 实时查看日志
+tail -f log.txt
+```
+## Linux指令里面的符号
+### 1.&&
+前面的指令成功执行完后，接着执行后面的指令。  
+### 2.&
+在命令末尾加上 &，可以让这个命令在后台运行，一般是在控制终端的时候需要打开某个会持续打印内容的命令的时候需要用到，因为如果不加上 &，这个命令就会一直占用着这个终端，导致我们无法在这个终端上执行其他的命令了。如用iperf3 -s的时候
+### 3.|
+管道符，前一个命令的输出作为后一个命令的输入。
+
+### 1.重定向符号（I/O 重定向
+| 符号          | 用法                 | 说明                                |
+| ----------- | ------------------ | --------------------------------- |
+| `>`         | `command > file`   | 将命令输出重定向到文件，覆盖原内容                 |
+| `>>`        | `command >> file`  | 将命令输出追加到文件末尾                      |
+| `<`         | `command < file`   | 将文件内容作为命令输入                       |
+| `<<`        | Here Document      | `command <<EOF ... EOF`，将多行文本作为输入 |
+| `<<<`       | Here String        | `command <<< "text"`，将字符串作为输入     |
+| `2>`        | `command 2> file`  | 将标准错误（stderr）重定向到文件               |
+| `2>>`       | `command 2>> file` | 将标准错误追加到文件                        |
+| `&>`        | `command &> file`  | 将标准输出和标准错误都重定向到文件                 |
+| `>&`        | 文件描述符重定向           | `command >&2` 将标准输出重定向到标准错误       |
+| `/dev/null` | 丢弃输出               | `command > /dev/null 2>&1` 丢弃所有输出 |
+
+### 2.管道和命令连接符
+| 符号     | 用法                | 说明                            |       |                             |       |                     |
+| ------ | ----------------- | ----------------------------- | ----- | --------------------------- | ----- | ------------------- |
+| `      | `                 | `cmd1                         | cmd2` | 管道：将 cmd1 的标准输出传给 cmd2 作为输入 |       |                     |
+| `      |                   | `                             | `cmd1 |                             | cmd2` | 逻辑或：cmd1 失败时执行 cmd2 |
+| `&&`   | `cmd1 && cmd2`    | 逻辑与：cmd1 成功时执行 cmd2           |       |                             |       |                     |
+| `;`    | `cmd1; cmd2`      | 顺序执行 cmd1 和 cmd2，无论成功与否       |       |                             |       |                     |
+| `&`    | `cmd &`           | 后台执行命令                        |       |                             |       |                     |
+| `()`   | `(cmd1; cmd2)`    | 子 Shell 执行命令，命令在子 Shell 中独立执行 |       |                             |       |                     |
+| `{}`   | `{ cmd1; cmd2; }` | 命令组合，在当前 Shell 中执行            |       |                             |       |                     |
+| `!`    | `! command`       | 逻辑非，取反命令退出状态                  |       |                             |       |                     |
+| `time` | `time command`    | 统计命令执行时间（不是符号，但常和管道结合使用）      |       |                             |       |                     |
+
+### 3. 通配符和模式匹配
+| 符号       | 用法                | 说明                                  |
+| -------- | ----------------- | ----------------------------------- |
+| `*`      | `*.txt`           | 匹配任意长度的任意字符                         |
+| `?`      | `file?.txt`       | 匹配单个字符                              |
+| `[...]`  | `[abc]*`          | 匹配方括号中的任意一个字符                       |
+| `[!...]` | `[!a]*`           | 匹配不在方括号中的字符                         |
+| `{...}`  | `file{1,2,3}.txt` | 扩展：生成 file1.txt、file2.txt、file3.txt |
+| `~`      | `~/`              | 当前用户家目录                             |
+| `.`      | `./script.sh`     | 当前目录                                |
+| `..`     | `../`             | 上级目录                                |
+| `**`     | `**/*.txt`        | （bash 4+）递归匹配子目录                    |
+### 4. 变量与参数符号
+| 符号       | 用法             | 说明          |
+| -------- | -------------- | ----------- |
+| `$`      | `$VAR`         | 变量引用        |
+| `${}`    | `${VAR}`       | 明确变量边界或高级操作 |
+| `$#`     | `echo $#`      | 参数数量        |
+| `$?`     | `echo $?`      | 上条命令退出状态    |
+| `$0`     | 脚本名            |             |
+| `$1..$9` | 位置参数           |             |
+| `$@`     | 所有位置参数（逐个展开）   |             |
+| `$*`     | 所有位置参数（当作一个整体） |             |
+| `$$`     | 当前 Shell PID   |             |
+| `$!`     | 最近后台命令的 PID    |             |
+
+### 5. 引号和转义符
+| 符号       | 用法              | 说明             |
+| -------- | --------------- | -------------- |
+| `"`      | `"text $VAR"`   | 双引号，允许变量替换和转义  |
+| `'`      | `'text $VAR'`   | 单引号，原样输出，不替换变量 |
+| `` ` ``  | `` `command` `` | 命令替换（旧形式）      |
+| `$(...)` | `$(command)`    | 命令替换（推荐形式）     |
+| `\`      | `\n` 或 `\$VAR`  | 转义字符           |
+| `#`      | `# 注释`          | 注释，忽略整行或行尾内容   |
+| `:`      | `:`             | 空命令，类似 `true`  |
+| `\n`     | 换行              | 在双引号中或命令中换行    |
+
+### 6. 特殊文件符号和测试符号
+| 符号        | 用法                       | 说明                         |
+| --------- | ------------------------ | -------------------------- |
+| `.`       | `.`                      | 当前目录，或者 source 命令 `. file` |
+| `/`       | `path/file`              | 目录分隔符                      |
+| `-`       | `-f file`                | 测试文件或选项标志                  |
+| `[` `]`   | `[ -f file ]`            | 条件测试，必须有空格                 |
+| `[[` `]]` | `[[ $a == $b ]]`         | 高级条件测试，支持模式匹配              |
+| `-o`      | `[ -f file -o -d dir ]`  | 或逻辑（在 test/[] 中）           |
+| `-a`      | `[ -f file -a -r file ]` | 与逻辑（在 test/[] 中）           |
+
+### 7. 作业控制和其他符号
+| 符号          | 用法                 | 说明            |
+| ----------- | ------------------ | ------------- |
+| `%`         | `jobs`, `%1`       | 作业编号          |
+| `^`         | `^old^new`         | 快速替换上条命令中的内容  |
+| `~+` / `~-` | `cd ~+` / `cd ~-`  | 上次或上上次目录      |
+| `=`         | `VAR=value`        | 变量赋值          |
+| `export`    | `export VAR=value` | 导出环境变量        |
+| `alias`     | `alias ll='ls -l'` | 命令别名          |
+| `type`      | `type command`     | 查看命令类型（内建/外部） |
+
+
+
+
+## 打包软件给离线使用
+在实际的开发中遇到这种情况，实体机没办法连接到网络，但是需要下载一个工具，因此可以在虚拟机上下载好，然后打包通过终端的scp命令上传到实体机上，以iperf3工具为例。
+
+因为我的虚拟机和实体机是不同的系统，一个是linux一个是arm64，所以后面就选择了在主机pc进行下载包，然后打包给虚拟机了。
+1. 进入华为云服务器镜像 https://repo.openeuler.org/
+2. 选择适合的版本和架构，下载iperf3的rpm包
+3. 通过scp命令将rpm包上传到实体机上，用网线连接虚拟机和实体机，上传命令如下
+```bash
+scp iperf3-3.1.1-1.aarch64.rpm root@192.168.1.100:/root/
+```
+4. 在实体机上安装iperf3，其实就是解压安装包
+```bash
+rpm -ivh iperf3-3.1.1-1.aarch64.rpm
+```
+5. 验证安装成功
+```bash 
+iperf3 --version
+```
+这样就完成了在没有网络的实体机上安装iperf3工具的过程了。在完成这个的时候，我一开始忘记了实体机和虚拟机是不同的系统，所以一开始给实体机上传了个linux的iperf3包，在打包的过程中，我发现原来包核心就包含两个文件，一个是程序本身，另一个是依赖库文件。
+
 
 # 1.QT学习
 ## 1.1.QML学习
@@ -557,6 +858,119 @@ GetTestData {
 }
 作为父组件的子元素，通过id访问，作为独立的子组件存在
 ```
+
+## 1.2.C++学习
+### 1.2.1.调用系统终端
+我们在开发的时候有时候需要在qt中调用终端的指令来直接访问整个系统的功能，在qt中主要有两种方法来使用终端的指令，一种是直接用system函数来调用，另一种是用QProcess类来调用，下面是两种方法的示例代码
+```cpp
+//方法一：使用system函数
+// ❗ 无法获取输出
+// ❗ 阻塞线程（UI会卡死）
+// ❗ 不安全（容易被注入）
+// ❗ 不可控（无法管理进程）
+#include <cstdlib>
+system("ls -l");
+
+//方法二：使用QProcess类
+// 1.启动一个命令（最基本）
+QProcess process;
+process.start("ls", QStringList() << "-l");
+process.waitForFinished();
+// 2.获取标准输出（stdout）
+QString output = process.readAllStandardOutput();
+// 3.获取错误输出（stderr）
+QString error = process.readAllStandardError();
+// 4.执行复杂 shell 命令（管道 / 重定向）
+QProcess process;
+process.start("bash", QStringList() << "-c" << "ls -l | grep txt");
+process.waitForFinished();
+// 5.同步执行（阻塞）
+process.waitForFinished();
+// 6.异步执行（推荐 ⭐⭐⭐）
+QProcess *process = new QProcess(this);
+connect(process, &QProcess::readyReadStandardOutput, [=]() {
+    qDebug() << process->readAllStandardOutput();
+});
+
+connect(process, &QProcess::finished, [=]() {
+    qDebug() << "finished";
+});
+process->start("ping", QStringList() << "www.google.com");
+// 7.结束进程
+process.terminate(); // 温和结束
+process.kill();      // 强制结束
+
+```
+
+## 1.3.配置文件makefile
+### 1.3.1.如何实现在开发的时候执行某条语句，在发布的时候不执行
+在开发翻译功能的时候发现，我在开发环境时下载了依赖包，但是在执行系统哪里没有这个执行包，因此需要在编译为执行系统的对应执行文件的时候我需要屏蔽掉这个执行包的检测功能，因此我就想在makefile文件中添加一个条件判断，如果是开发环境就执行这个包的检测，如果是发布环境就不执行这个包的检测，下面是示例代码  
+
+方案一：使用自定义开关（最推荐）  
+发布环境（默认）： cmake .. （此时不检测 lupdate）  
+开发环境： cmake -DBUILD_DEV_MODE=ON ..  
+```cmake
+# 1. 定义一个开关，默认关闭（OFF 表示发布环境）
+option(BUILD_DEV_MODE "Enable development tools like lupdate" OFF)
+
+if(BUILD_DEV_MODE)
+    message(STATUS "Development mode: Searching for Linguist tools...")
+    find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+    
+    # 执行翻译更新逻辑
+    qt6_add_translations(your_project TS_FILES your_project_zh.ts)
+else()
+    message(STATUS "Release mode: Skipping lupdate check.")
+    # 如果发布环境不需要更新 .ts，但仍需要把现有的 .ts 编译成 .qm，可以用更轻量的宏
+    # 或者直接跳过，只要你的 .qm 已经包含在 .qrc 资源文件中即可
+endif()
+```
+方案二：根据环境变量自动判断  
+```cmake
+# 检查环境变量 ENV_TYPE 是否为 "development"
+if("$ENV{ENV_TYPE}" STREQUAL "development")
+    find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+    qt6_add_translations(your_project TS_FILES your_project_zh.ts)
+else()
+    message(STATUS "Non-development environment detected, skipping lupdate.")
+endif()
+```
+方案三：静默查找（不报错模式）
+```cmake
+# 不带 REQUIRED，找不到也不会 Error
+find_package(Qt6 COMPONENTS LinguistTools QUIET)
+
+# 检查是否真的找到了该目标
+if(TARGET Qt6::lupdate)
+    message(STATUS "lupdate found, adding translation targets.")
+    qt6_add_translations(your_project TS_FILES your_project_zh.ts)
+else()
+    message(WARNING "lupdate not found, translation update targets will not be created.")
+endif()
+```
+
+## 1.4.CMake指令
+### 1.4.1.option() 
+用来定义一个布尔型的开关变量，默认值为 OFF，在配置阶段由开发者输入，决定某些功能是否启用。 
+### 1.4.2.set() 
+用来直接设置变量值  
+```cmake
+set(MY_FLAG ON)
+```
+### 1.4.3.add_definitions() / target_compile_definitions()  
+用来给编译器添加宏定义，常用于条件编译：
+```cmake
+add_definitions(-DMY_FEATURE_ENABLED)
+```
+### 1.4.4.add_compile_options() / target_compile_options()  
+添加编译器选项，比如优化等级或警告开关
+```cmake
+add_compile_options(-Wall -O2)
+```
+### 1.4.5.feature_summary()
+配合 option() 使用，可以在配置结束时打印出哪些功能开关被启用或关闭。
+
+
 
 
 ---
@@ -658,7 +1072,8 @@ Make 步骤： * 调用编译器（如 MSVC 的 nmake 或 GCC 的 make）进行�
 1.虚拟机上挂载好主机的共享路径，获得目的文件
 sudo vmhgfs-fuse .host:/ /mnt/hgfs/ -o allow_other -o nonempty #添加最后面的参数可以挂载到非空目录下
 2.使用docker进入容器
-sudo docker run --privileged -v /mnt/hgfs/WinShare/qt:/root -it terra-arm64-qt6-build-addmd:v2 bash
+sudo docker run --privileged -v /mnt/hgfs/WinShare/qt:/root -it terra-arm64-qt6-build-addmd:v2 bash    
+进入后如果ls没有想要的内容，那么就cp root 进入root目录下，内容就都在里面了
 3.添加环境变量
   export PATH=/usr/bin/qt6/bin:$PATH
   export LANG=C.UTF-8
