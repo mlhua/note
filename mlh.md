@@ -995,6 +995,41 @@ else()
     message(WARNING "lupdate not found, translation update targets will not be created.")
 endif()
 ```
+### 1.3.2.资源文件
+1. SOURCES：代码的源头
+SOURCES（或者在 qt_add_executable 中直接列出的 .cpp 和 .h 文件）是给编译器看的。
+
+处理对象：.cpp、.h、.cxx 等源文件。
+
+处理流程：
+
+编译：编译器将 .cpp 编译成二进制的 .o (或 .obj) 目标文件。
+
+MOC 处理：如果 .h 文件中有 Q_OBJECT 宏，Qt 会自动调用元对象编译器生成 moc_xxx.cpp。
+
+链接：链接器将这些目标文件打包成最终的可执行文件。
+
+如果不写会怎样：会报 undefined reference（未定义的引用）错误，因为链接器找不到代码的实现。
+
+2. RESOURCES：文件的容器
+RESOURCES 是给 Qt 资源系统看的。它利用 rcc（Qt Resource Compiler）工具，将外部文件直接嵌入到二进制程序中。
+
+处理对象：.qml、.js、.png、.svg、.json 等非代码文件。
+
+处理流程：
+
+虚拟化：rcc 将这些文件转换成 C++ 数组。
+
+嵌入：这些数据被编译进可执行文件。
+
+访问：在程序运行期间，你可以通过特殊的路径前缀 qrc:/ 或 :/ 访问它们。
+
+优点：
+
+路径安全：不需要担心用户删除了外部图片导致程序崩溃，因为文件就在二进制包里。
+
+部署方便：发布程序时，只需要给用户一个 .exe（或 Linux 下的二进制文件），不需要带一堆文件夹。
+
 
 ## 1.4.CMake指令
 ### 1.4.1.option() 
