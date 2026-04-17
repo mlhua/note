@@ -877,6 +877,12 @@ export PATH=$PATH:/path/to/your/script_or_app #一定要加上$PATH:，这是说
 source ~/.bashrc # 让修改生效
 ```
 
+## 调试软件
+背景：在开发过程中，遇到打开一个软件后，没办法正常运行，为了查看是哪里报错了，所以需要在linux终端调试，主要有以下方法：
+1. ldd ./your_app # 查看依赖的库文件
+2. ./your_app # 查看运行时的错误信息
+3. ./appPunp -platform eglfs  # 尝试使用 eglfs 平台  
+   ./appPunp -platform linuxfb # 或者尝试使用 linuxfb (纯软件渲染，不依赖 GPU)
 
 
 # 1.QT学习
