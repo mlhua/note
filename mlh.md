@@ -885,6 +885,38 @@ source ~/.bashrc # 让修改生效
    ./appPunp -platform linuxfb # 或者尝试使用 linuxfb (纯软件渲染，不依赖 GPU)
 
 
+## 开源代码学习（V0.11）
+### 任务调度 / kernel / sched.c
+他的大致流程如下：  
+用户程序运行  
+      ↓  
+时钟中断 (do_timer)  
+      ↓  
+counter--，如果 >0 → 返回继续运行  
+      ↓  
+counter == 0 → 调用 schedule()  
+      ↓  
+schedule()：  
+  1. 处理信号，唤醒任务  
+  2. 找到 counter 最大的 TASK_RUNNING  
+  3. 如果都为 0 → 重新计算 counter  
+  4. switch_to(next)  
+      ↓  
+切换到新进程  
+
+调用switch_to()函数切换到新进程，具体动作如下：  
+schedule()  
+   ↓  
+找到 counter 最大的进程 next  
+   ↓  
+switch_to(next)  
+   ↓  
+CPU 执行 ljmp → 加载 TSS → 切换上下文  
+   ↓  
+新进程开始运行  
+
+
+
 # 1.QT学习
 ## 1.1.QML学习
 ### 1.1.1.常用操作
@@ -1160,6 +1192,33 @@ Make 步骤： * 调用编译器（如 MSVC 的 nmake 或 GCC 的 make）进行�
 
 ## 六、C++ 设置 (C++ Settings / Compiler flags)
 如果你使用的是特定版本的 C++（如 C++17 或 C++20），有时需要在这里确认编译器开关是否正确开启。
+
+## 七、QT如何处理资源文件
+在QT6.8资源的打包机制已经从传统的“手动配置 .qrc 文件”全面转向了以 CMake 为核心的自动化流程，核心工具是RCC(Resource Compiler)，无论是qml文件还是json文件都经过RCC处理，生成对应的头文件，他的核心过程是rcc 读取文件 生成包含十六进制数据的 .cpp 文件  编译器将其编译为 .obj/.o 链接进主程序。那么他们的文件地址在执行的时候只哪呢，运行期间，Qt 会在内存中维护一个以 :/ 开头的虚拟文件系统，通过 QFile 或 URL 即可像访问普通路径一样访问这些内置数据。  
+
+1. qml文件:  在QT6中，qml文件不再是简单的资源文件，而是被视为模块，在cmakelist中这样定义
+```
+qt_add_qml_module(appmyapp
+    URI MyModule
+    VERSION 1.0
+    QML_FILES
+        Main.qml
+        SideBar.qml
+)
+```
+这样定义后，在程序编译的时候就会自动打包所有的 QML_FILES 会被自动加入资源系统（默认路径通常是 :/qt/qml/MyModule/）。Qt 6.8 的 QML Compiler (qmlcachegen) 会在编译阶段将 QML 源代码转化为字节码，甚至是真正的 C++ 代码，这种方式提供了更好的语法检查和性能优化，而不仅仅是把文本存进去。
+2. json文件等资源:  json文件如果需要被打包成资源文件，可以直接在cmakelist中这样定义
+```
+qt_add_resources(appmyapp "configs"
+    PREFIX "/data" # 资源访问路径前缀
+    FILES
+        "settings.json"
+        "theme.json"
+)
+```
+rcc 默认会检查文件，如果压缩后体积能缩小（默认阈值 70%），则会使用 zstd 或 zlib 进行压缩存储，运行时会自动解压缩，访问路径为 :/data/settings.json。对于一些小文件（如图标、配置文件等），Qt 6.8 的资源系统会自动启用压缩机制，以节省内存和磁盘空间。同时一定要记得JSON 文件在程序中是只读的，如果需要修改，必须先把它读出来，修改后再写回去。
+
+
 
 
 ---
