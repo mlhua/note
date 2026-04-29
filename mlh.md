@@ -711,6 +711,24 @@ netns	网络命名空间	ip netns add testns 创建命名空间；ip netns exec 
 tunnel	隧道管理 (GRE/IPIP)	ip tunnel add tun0 mode gre remote 1.2.3.4 local 5.6.7.8
 ```
 
+### 33、set
+设置环境变量，用于控制脚本的行为，比如常用的如果命令执行失败，脚本是否继续执行。  
+```bash
+set -x 显示所有命令
+set -u 禁止未定义变量
+set -e 禁止错误退出
+# 常在脚本开头使用如下组合拳
+set -euo pipefail
+#-e: 命令失败即退出
+#-u: 遇到未定义的变量即退出（防止 rm -rf $UNDEFINED_VAR/* 这种由于变量写错导致的误删）。
+#-o pipefail: 只要管道中任意一个环节失败，整个管道就被视为失败
+```
+
+### 34、pwd
+打印当前工作目录  
+
+###
+
 ### 常用组合示例
 
 ```bash
@@ -966,6 +984,37 @@ Text.AlignVCenter (垂直居中)
 2. 控制父组件的enable属性
 3. 在弹出的组件上设置一个全屏的透明背景，捕获点击事件，阻止事件冒泡到父组件，核心用mouseArea捕获点击事件，代码如下
 
+### 1.1.4.Connections使用
+A 组件里监听 B 组件抛出的信号时，Connections 就是那根跨越空间的“连线”，Connections 最关键的属性是 target。你把 target 指向谁，你就能接收谁的信号。
+```qml
+Connections {
+    target: 信号发送者 // 这里指向某个对象 ID 或 属性
+    
+    // 信号处理器命名规则：on + 信号名（首字母大写）
+    function onDataChanged() {
+            console.log("当前传感器数据已更新")
+    }
+}
+```
+属性介绍
+```
+target	Object	核心属性。指定要监听信号的对象。如果设为 null（默认值），则不监听任何信号。
+
+enabled	bool	控制连接是否处于激活状态。默认为 true。设为 false 时，即使信号触发，处理器也不会执行。
+
+ignoreUnknownSignals	bool	默认为 false。如果设为 true，当 target 中不存在某个 onSignal 处理器对应的信号时，QML 引擎不会报错。
+```
+
+### 1.1.5.翻译工具lupdate
+lupdate是一个命令行工具，用于从QML文件中提取可翻译的字符串。lupdate的语法如下：
+```bash
+# 进入你的项目根目录，这里应该包含 UI/ 文件夹（主要有CMakelist.txt）
+cd /home/lubancat/work/qt/punp/qt
+# 翻译文件更新生成到绝对路径
+/opt/Qt/6.8.3/gcc_64/bin/lupdate . -ts /home/lubancat/work/qt/punp/qt/UI/translations/app_zh_CN.ts 
+#如果是不同的语言，需要修改ts文件的名称
+```
+在用的时候需要下载才行，怎么下载自己问ai
 
 
 ## 1.2.C++学习
@@ -1092,6 +1141,34 @@ RESOURCES 是给 Qt 资源系统看的。它利用 rcc（Qt Resource Compiler）
 
 部署方便：发布程序时，只需要给用户一个 .exe（或 Linux 下的二进制文件），不需要带一堆文件夹。
 
+3. RESOURCES后的路径
+RESOURCES 后的路径是相对于资源文件的路径，而不是相对于可执行文件的路径，比如
+```cmake
+qt_add_resources(appPunpQT "additional_resources"
+    PREFIX "/"
+    FILES
+        users.json
+)
+```
+访问他的路径就是":/users.json"
+```cmake
+qt_add_resources(appPunpQT "translations"
+    PREFIX "/i18n"
+    FILES
+        "UI/translations/app_zh_CN.qm"
+)
+```
+这个的话就是":/i18n/UI/translations/app_zh_CN.qm"，他包含了资源文件的路径了，所以访问的时候也要包含资源文件的路径了，问题出在Qt 6 资源系统（Qt Resources）在 CMake 中的默认行为：别名（Alias）问题，如果你不想加前缀，那么就使用 BASE 参数，或者直接手动指定别名
+```cmake
+qt_add_resources(appPunpQT "translations"
+    PREFIX "/i18n"
+    BASE "UI/translations"  # 忽略这个目录前缀
+    FILES
+        "UI/translations/app_zh_CN.qm"
+        "UI/translations/app_en_US.qm"
+)
+```
+这样就可以不用加上资源文件的路径了，直接访问":/i18n/app_zh_CN.qm"就可以了，很多时候出现资源找不到的问题就是这个的原因。
 
 ## 1.4.CMake指令
 ### 1.4.1.option() 
@@ -1311,6 +1388,12 @@ git reset --hard #重置到最新提交，删除所有未提交的更改，才�
 git reset --hard 提交ID #回退到指定提交
 ```
 
+## 四、上传文件.gitignore
+在项目根目录下创建一个名为 .gitignore 的文件，并在其中添加规则来指定哪些文件或目录应该被 Git 忽略不上传到git仓库。例如：
+```
+*.qm  // 忽略所有qm文件
+!UI/translations/*.qm  // 但是保留UI/translations目录下的qm文件，因为这些文件是翻译文件，不能被忽略
+```
 # 工作日记
 ## 每日工作总结
 
