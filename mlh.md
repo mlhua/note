@@ -741,6 +741,10 @@ ps aux | sort -rk 4 | head
 # 实时查看日志
 tail -f log.txt
 ```
+
+## Linux下载软件
+下载软件首先要先清楚自己的架构，是arm的还是X86的，用指令 `uname -m` 查看架构，知道架构后就需要清楚自己的linux系统的版本，使用指令 `lsb_release -a` 来查看系统版本，知道了架构和系统版本后就可以去官网下载对应的软件了。常见的软件后缀有.deb、.rpm、.tar.gz等，下载后根据后缀来安装软件，如.deb的软件可以使用 `sudo dpkg -i 软件包.deb` 来安装，.rpm的软件可以使用 `sudo rpm -i 软件包.rpm` 来安装，.tar.gz的软件需要先解压，然后进入解压后的目录，根据里面的README文件来安装。对于如何选择是deb还是rpm的软件包，主要取决于你的Linux发行版。Debian、Ubuntu等基于Debian的系统通常使用.deb包，而Red Hat、CentOS、Fedora等基于Red Hat的系统通常使用.rpm包。
+
 ## Linux指令里面的符号
 ### 1.&&
 前面的指令成功执行完后，接着执行后面的指令。  

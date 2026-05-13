@@ -1,0 +1,8 @@
+1.00andrej-karpathy-skills-main
+是规范编程
+
+3.02caveman-main
+减少 75% 的输出 token
+4.03graphify-7
+把代码库变成知识图谱的技能包
+
